@@ -1,0 +1,249 @@
+// components/Login.tsx
+import { Link } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+export default function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+  return (
+    <View style={styles.container}>
+      <View style={styles.formContainer}>
+        <View style={styles.headerSection}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to your account</Text>
+        </View>
+
+        <View style={styles.formSection}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              placeholder="Enter your username"
+              placeholderTextColor="#888"
+              style={styles.textInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                placeholder="Enter your password"
+                placeholderTextColor="#888"
+                secureTextEntry={!showPassword}
+                style={styles.passwordInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.forgotPassword}>
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.loginButton} onPress={() => {}}>
+            <Text style={styles.loginButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dividerContainer}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <View style={styles.registerSection}>
+          <Text style={styles.newUserText}>Don't have an account?</Text>
+          <Link href="./register" asChild>
+            <TouchableOpacity style={styles.registerButton}>
+              <Text style={styles.registerButtonText}>Create Account</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  formContainer: {
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    fontFamily: 'LexendDeca-Regular',
+    color: '#111111',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: 'LexendDeca-Regular',
+    color: '#666',
+    textAlign: 'center',
+  },
+  formSection: {
+    marginBottom: 32,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontFamily: 'LexendDeca-Regular',
+    color: '#111111',
+    marginBottom: 8,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    fontFamily: 'LexendDeca-Regular',
+    color: '#111111',
+    backgroundColor: '#fafafa',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 16,
+    paddingRight: 50,
+    fontSize: 16,
+    fontFamily: 'LexendDeca-Regular',
+    color: '#111111',
+    backgroundColor: '#fafafa',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 16,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eyeText: {
+    fontSize: 16,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+    marginTop: -8,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    fontFamily: 'LexendDeca-Regular',
+    color: '#666',
+    fontWeight: '500',
+  },
+  loginButton: {
+    backgroundColor: '#111111',
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+    shadowColor: '#111111',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'LexendDeca-Regular',
+    letterSpacing: 0.5,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  dividerText: {
+    fontSize: 14,
+    fontFamily: 'LexendDeca-Regular',
+    color: '#999',
+    marginHorizontal: 16,
+    fontWeight: '500',
+  },
+  registerSection: {
+    alignItems: 'center',
+  },
+  newUserText: {
+    fontSize: 15,
+    fontFamily: 'LexendDeca-Regular',
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  registerButton: {
+    borderWidth: 1.5,
+    borderColor: '#111111',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    backgroundColor: 'white',
+    minWidth: 160,
+  },
+  registerButtonText: {
+    color: '#111111',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'LexendDeca-Regular',
+    letterSpacing: 0.5,
+  },
+});
