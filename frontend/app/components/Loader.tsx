@@ -1,7 +1,6 @@
 // components/Loader.tsx
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, View } from 'react-native';
-import Logo from '../assets/images/logo.png';
 
 export default function Loader() {
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -36,7 +35,8 @@ export default function Loader() {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-      <Image source={Logo} style={{ width: 150, height: 150, marginBottom: 10 }} resizeMode="contain" />
+
+      <Image source={require('../assets/images/logo.png')} resizeMode="contain" style={{ width: 150, height: 150, marginBottom: 10 }} />
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', height: 10 }}>
         <Animated.View style={{ width: 8, height: 8, borderRadius: 5, backgroundColor: '#111111', marginHorizontal: 5, transform: [{ translateY: dot1 }] }} />

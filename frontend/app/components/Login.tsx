@@ -1,10 +1,45 @@
-// components/Login.tsx
-import { Link } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Link, router } from 'expo-router';
+
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const SERVER_URL = 'http://172.16.35.42:5000'; // ✅ Update this with your backend IP if needed
+
+
+  const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert('Validation Error', 'Please enter both email and password.');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${SERVER_URL}/api/login`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+     if (response.ok) {
+      router.replace('/dashboard');
+    } else {
+      Alert.alert('Login Failed', data.message || 'Invalid credentials.');
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    Alert.alert('Network Error', 'Could not connect to the server.');
+  }
+};
+
+
   return (
     <View style={styles.container}>
       <View style={styles.formContainer}>
@@ -15,13 +50,16 @@ export default function Login() {
 
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Username</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
-              placeholder="Enter your username"
+              placeholder="Enter your email"
               placeholderTextColor="#888"
               style={styles.textInput}
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
             />
           </View>
 
@@ -35,8 +73,10 @@ export default function Login() {
                 style={styles.passwordInput}
                 autoCapitalize="none"
                 autoCorrect={false}
+                value={password}
+                onChangeText={setPassword}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
@@ -45,11 +85,15 @@ export default function Login() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+          <Link href="./forgot" asChild>
+  <TouchableOpacity style={styles.forgotPassword}>
+    <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+  </TouchableOpacity>
+</Link>
 
-          <TouchableOpacity style={styles.loginButton} onPress={() => {}}>
+
+
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
             <Text style={styles.loginButtonText}>Sign In</Text>
           </TouchableOpacity>
         </View>
@@ -62,7 +106,7 @@ export default function Login() {
 
         <View style={styles.registerSection}>
           <Text style={styles.newUserText}>Don't have an account?</Text>
-          <Link href="./register" asChild>
+          <Link href="/register" asChild>
             <TouchableOpacity style={styles.registerButton}>
               <Text style={styles.registerButtonText}>Create Account</Text>
             </TouchableOpacity>
@@ -126,14 +170,6 @@ const styles = StyleSheet.create({
     fontFamily: 'LexendDeca-Regular',
     color: '#111111',
     backgroundColor: '#fafafa',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   passwordContainer: {
     position: 'relative',
@@ -148,14 +184,6 @@ const styles = StyleSheet.create({
     fontFamily: 'LexendDeca-Regular',
     color: '#111111',
     backgroundColor: '#fafafa',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   eyeButton: {
     position: 'absolute',
@@ -186,14 +214,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 18,
     alignItems: 'center',
-    shadowColor: '#111111',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
   loginButtonText: {
     color: 'white',

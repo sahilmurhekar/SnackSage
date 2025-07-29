@@ -1,4 +1,5 @@
-// app/register.tsx
+// app/register.tsx - COMPLETE VERSION
+
 import React, { useState } from 'react';
 import { Text, TextInput, View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
@@ -20,6 +21,7 @@ interface UserData {
 export default function Register() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [userData, setUserData] = useState<UserData>({
     name: '',
     email: '',
@@ -35,7 +37,6 @@ export default function Register() {
   });
 
   const totalSteps = 5;
-
   const dietOptions = ['omnivore', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo'];
   const healthGoalOptions = ['weight loss', 'weight gain', 'muscle building', 'low sodium', 'low sugar', 'heart healthy'];
   const cuisineOptions = ['Indian', 'Mediterranean', 'Italian', 'Chinese', 'Mexican', 'American', 'Thai', 'Japanese'];
@@ -56,7 +57,6 @@ export default function Register() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
-      // If on first step, go back to login
       router.back();
     }
   };
@@ -111,29 +111,73 @@ export default function Register() {
   };
 
   const handleSubmit = async () => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+
+  const SERVER_URL = 'http://172.16.35.42:5000'; // Adjust if needed
+
+  try {
+    const payload = {
+      ...userData,
+      authProvider: 'email',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const response = await fetch(`${SERVER_URL}/api/register`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseText = await response.text();
+    let data;
+
     try {
-      // Here you would typically send the data to your backend
-      console.log('User Registration Data:', {
-        ...userData,
-        authProvider: 'email',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      throw new Error('Server response is not valid JSON.');
+    }
+
+    if (response.ok) {
       Alert.alert(
-        'Success', 
-        'Account created successfully!',
+        'Success',
+        data.message || 'Account created successfully!',
         [
           {
-            text: 'Continue',
-            onPress: () => router.replace('/') // Navigate to main app or login
+            text: 'Go to Dashboard',
+            onPress: () => router.replace('./dashboard') // Replace with your dashboard route
           }
         ]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create account. Please try again.');
+    } else if (response.status === 400 && data.message?.toLowerCase().includes('exists')) {
+      Alert.alert(
+        'Account Already Exists',
+        'Redirecting to homepage.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/') // Home page
+          }
+        ]
+      );
+    } else {
+      Alert.alert('Registration Failed', data.message || 'Something went wrong. Try again.');
     }
-  };
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    Alert.alert(
+      'Network Error',
+      'Could not connect to server. Make sure the server is running and accessible.'
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const toggleSelection = (array: string[], item: string, setter: (newArray: string[]) => void) => {
     if (array.includes(item)) {
@@ -156,7 +200,6 @@ export default function Register() {
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>What's your name?</Text>
       <Text style={styles.stepSubtitle}>We'll use this to personalize your experience</Text>
-      
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Full Name</Text>
         <TextInput
@@ -175,7 +218,6 @@ export default function Register() {
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>Create Account</Text>
       <Text style={styles.stepSubtitle}>Set up your secure login credentials</Text>
-      
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
         <TextInput
@@ -189,7 +231,6 @@ export default function Register() {
           autoCorrect={false}
         />
       </View>
-
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Password</Text>
         <View style={styles.passwordContainer}>
@@ -203,7 +244,7 @@ export default function Register() {
             autoCapitalize="none"
             autoCorrect={false}
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.eyeButton}
             onPress={() => setShowPassword(!showPassword)}
           >
@@ -219,7 +260,6 @@ export default function Register() {
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>Diet & Lifestyle</Text>
       <Text style={styles.stepSubtitle}>Tell us about your dietary preferences</Text>
-      
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Diet Preference</Text>
         <View style={styles.optionsContainer}>
@@ -245,7 +285,6 @@ export default function Register() {
           ))}
         </View>
       </View>
-
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Household Size</Text>
         <Text style={styles.inputHint}>How many people will you be cooking for?</Text>
@@ -284,7 +323,6 @@ export default function Register() {
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>Health Goals</Text>
       <Text style={styles.stepSubtitle}>What are you trying to achieve? (Select all that apply)</Text>
-      
       <View style={styles.optionsContainer}>
         {healthGoalOptions.map((goal) => (
           <TouchableOpacity
@@ -418,25 +456,29 @@ export default function Register() {
   return (
     <View style={styles.container}>
       {renderProgressBar()}
-      
       <View style={styles.contentContainer}>
         {renderCurrentStep()}
       </View>
-
       <View style={styles.navigationContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <TouchableOpacity 
+          style={[styles.backButton, isSubmitting && styles.disabledButton]} 
+          onPress={handleBack}
+          disabled={isSubmitting}
+        >
           <Text style={styles.backButtonText}>
             {currentStep === 1 ? 'Exit' : 'Back'}
           </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+        <TouchableOpacity 
+          style={[styles.nextButton, isSubmitting && styles.disabledButton]} 
+          onPress={handleNext}
+          disabled={isSubmitting}
+        >
           <Text style={styles.nextButtonText}>
-            {currentStep === totalSteps ? 'Create Account' : 'Next'}
+            {isSubmitting ? 'Creating...' : (currentStep === totalSteps ? 'Create Account' : 'Next')}
           </Text>
         </TouchableOpacity>
       </View>
-
       {currentStep === 1 && (
         <View style={styles.loginLinkContainer}>
           <Text style={styles.loginLinkText}>Already have an account? </Text>
@@ -668,6 +710,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'LexendDeca-Regular',
     letterSpacing: 0.5,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   loginLinkContainer: {
     flexDirection: 'row',
