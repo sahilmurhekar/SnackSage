@@ -9,7 +9,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const SERVER_URL = 'http://172.16.35.42:5000'; // ✅ Update this with your backend IP if needed
+ const SERVER_URL = 'http://192.168.80.179:5000'; 
 
 
   const handleLogin = async () => {
@@ -33,7 +33,7 @@ export default function Login() {
      if (response.ok) {
   await SecureStore.setItemAsync('token', data.token);
   await SecureStore.setItemAsync('user', JSON.stringify(data.user));
-  router.replace('/dashboard');
+  router.replace('./dashboard');
 } else {
       Alert.alert('Login Failed', data.message || 'Invalid credentials.');
     }
@@ -110,7 +110,7 @@ export default function Login() {
 
         <View style={styles.registerSection}>
           <Text style={styles.newUserText}>Don't have an account?</Text>
-          <Link href="/register" asChild>
+          <Link href="./register" asChild>
             <TouchableOpacity style={styles.registerButton}>
               <Text style={styles.registerButtonText}>Create Account</Text>
             </TouchableOpacity>

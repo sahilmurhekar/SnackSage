@@ -114,7 +114,7 @@ export default function Register() {
   if (isSubmitting) return;
   setIsSubmitting(true);
 
-  const SERVER_URL = 'http://172.16.35.42:5000'; // Adjust if needed
+const SERVER_URL = 'http://192.168.80.179:5000';
 
   try {
     const payload = {

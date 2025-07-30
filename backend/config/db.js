@@ -12,7 +12,7 @@ const connectDB = async () => {
     await mongoose.connect(uri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      dbName: 'SNACKSAGE_DB' // ✅ Explicitly set database name here
+      dbName: 'SNACKSAGE_DB'
     });
 
     console.log('MongoDB connected to database: snacksage');

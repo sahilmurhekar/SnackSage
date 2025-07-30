@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const userSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    unique: true,
+    default: () => uuidv4(),
+    required: true
+  },
   name: String,
   email: { type: String, unique: true },
   password: String,
@@ -13,8 +20,20 @@ const userSchema = new mongoose.Schema({
     householdSize: Number,
     mealFrequency: String
   },
-  createdAt: Date,
-  updatedAt: Date
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Update the updatedAt field before saving
+userSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
 module.exports = mongoose.model('User', userSchema);
