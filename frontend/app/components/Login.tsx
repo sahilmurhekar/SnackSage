@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Link, router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+
 
 
 export default function Login() {
@@ -29,8 +31,10 @@ export default function Login() {
     const data = await response.json();
 
      if (response.ok) {
-      router.replace('/dashboard');
-    } else {
+  await SecureStore.setItemAsync('token', data.token);
+  await SecureStore.setItemAsync('user', JSON.stringify(data.user));
+  router.replace('/dashboard');
+} else {
       Alert.alert('Login Failed', data.message || 'Invalid credentials.');
     }
   } catch (err) {
