@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Text, TextInput, View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 
 interface UserData {
   name: string;
@@ -114,7 +115,7 @@ export default function Register() {
   if (isSubmitting) return;
   setIsSubmitting(true);
 
-const SERVER_URL = 'http://192.168.80.179:5000';
+  const SERVER_URL = 'http://192.168.80.179:5000';
 
   try {
     const payload = {
@@ -142,14 +143,17 @@ const SERVER_URL = 'http://192.168.80.179:5000';
       throw new Error('Server response is not valid JSON.');
     }
 
-    if (response.ok) {
+    if (response.ok && data.token && data.user) {
+      // Store the token securely
+      await SecureStore.setItemAsync('token', data.token);
+
       Alert.alert(
-        'Success',
-        data.message || 'Account created successfully!',
+        'Welcome!',
+        `Hello ${data.user.name}, your account has been created.`,
         [
           {
-            text: 'Login',
-            onPress: () => router.replace('/') // Replace with your dashboard route
+            text: 'Go to Dashboard',
+            onPress: () => router.replace('/dashboard') // Update this if dashboard route differs
           }
         ]
       );
@@ -160,7 +164,7 @@ const SERVER_URL = 'http://192.168.80.179:5000';
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/') // Home page
+            onPress: () => router.replace('/')
           }
         ]
       );
