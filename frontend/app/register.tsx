@@ -148,8 +148,8 @@ const SERVER_URL = 'http://192.168.80.179:5000';
         data.message || 'Account created successfully!',
         [
           {
-            text: 'Go to Dashboard',
-            onPress: () => router.replace('./dashboard') // Replace with your dashboard route
+            text: 'Login',
+            onPress: () => router.replace('/') // Replace with your dashboard route
           }
         ]
       );
