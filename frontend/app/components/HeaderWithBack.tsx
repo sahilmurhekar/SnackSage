@@ -15,6 +15,7 @@ export default function HeaderWithBack({ title }: Props) {
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backButtonText}>← Back</Text>
       </TouchableOpacity>
+      {title && <Text style={styles.title}>{title}</Text>}
     </View>
   );
 }
@@ -27,7 +28,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-
   },
   backButton: {
     marginRight: 16,
@@ -36,5 +36,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#111',
     fontFamily: 'LexendDeca-Regular',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111',
+    fontFamily: 'LexendDeca-Regular',
+    flex: 1,
   },
 });

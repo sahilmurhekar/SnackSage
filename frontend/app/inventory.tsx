@@ -135,7 +135,7 @@ export default function Inventory() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <HeaderWithBack title="Your Inventory" />
+      <HeaderWithBack/>
 
       {Object.keys(inventory).length === 0 ? (
         <View style={styles.emptyContainer}>

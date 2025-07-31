@@ -11,7 +11,7 @@ import {
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import HeaderWithBack from './components/HeaderWithBack'; // 👈 Import the reusable header
+import HeaderWithBack from './components/HeaderWithBack';
 
 interface ItemData {
   name: string;
@@ -112,7 +112,7 @@ export default function AddItem() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <HeaderWithBack title="Add New Item" /> {/* 👈 Reusable header used here */}
+      <HeaderWithBack/>
 
       <View style={styles.form}>
         {/* Item Name */}
