@@ -146,3 +146,58 @@ exports.deleteItem = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
+// Update item
+exports.updateItem = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { itemId } = req.params;
+    const updateData = {
+      ...req.body,
+      userId, // Ensure userId remains unchanged
+      updatedAt: new Date()
+    };
+
+    // Remove fields that shouldn't be updated directly
+    delete updateData._id;
+    delete updateData.createdAt;
+
+    const item = await Item.findOneAndUpdate(
+      { _id: itemId, userId }, // Only allow updating user's own items
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    res.json({
+      message: 'Item updated successfully',
+      item
+    });
+  } catch (err) {
+    console.error('Update item error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get single item by ID
+exports.getItem = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { itemId } = req.params;
+
+    const item = await Item.findOne({ _id: itemId, userId });
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    res.json({ item });
+  } catch (err) {
+    console.error('Get item error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
