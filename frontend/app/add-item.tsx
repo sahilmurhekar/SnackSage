@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import HeaderWithBack from './components/HeaderWithBack';
+import {SERVER_URL} from '../constants/config';
 
 interface ItemData {
   name: string;
@@ -77,7 +78,7 @@ export default function AddItem() {
         return;
       }
 
-      const response = await fetch('http://192.168.80.179:5000/api/items/add', {
+      const response = await fetch(`${SERVER_URL}/api/items/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-
+import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const SERVER_URL = 'http://172.16.35.42:5000'; // Update if needed
 
   const handlePasswordReset = async () => {
     if (!email || !newPassword || !confirmPassword) {

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Text, TextInput, View, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-
+import {SERVER_URL} from '../constants/config';
 interface UserData {
   name: string;
   email: string;
@@ -115,7 +115,6 @@ export default function Register() {
   if (isSubmitting) return;
   setIsSubmitting(true);
 
-  const SERVER_URL = 'http://192.168.80.179:5000';
 
   try {
     const payload = {

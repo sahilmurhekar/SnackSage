@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import {SERVER_URL} from '../../constants/config';
 
 
 
@@ -9,7 +10,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
- const SERVER_URL = 'http://192.168.80.179:5000'; 
 
 
   const handleLogin = async () => {

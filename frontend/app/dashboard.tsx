@@ -13,7 +13,7 @@ import {
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
-const SERVER_URL = 'http://192.168.80.179:5000';
+import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
 const { width: screenWidth } = Dimensions.get('window');
 
 interface User {

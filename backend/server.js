@@ -1,13 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const {FRONTEND_URL} = require('./config/urls');
+
 require('dotenv').config();
 
 const app = express();
 
 connectDB();
 
-app.use(cors());
+app.use(cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+}));
 app.use(express.json());
 
 // Routes

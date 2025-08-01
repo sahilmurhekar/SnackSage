@@ -5,7 +5,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import HeaderWithBack from './components/HeaderWithBack';
-
+import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
 interface Item {
   _id: string;
   name: string;
@@ -32,7 +32,7 @@ export default function Inventory() {
         return;
       }
 
-      const response = await fetch('http://192.168.80.179:5000/api/items/inventory', {
+      const response = await fetch(`${SERVER_URL}/api/items/inventory`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ export default function Inventory() {
             }
 
             try {
-              const response = await fetch(`http://192.168.80.179:5000/api/items/${itemId}`, {
+              const response = await fetch(`${SERVER_URL}/api/items/${itemId}`, {
                 method: 'DELETE',
                 headers: {
                   'Authorization': `Bearer ${token}`,

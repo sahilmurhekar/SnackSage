@@ -16,7 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import HeaderWithBack from './components/HeaderWithBack';
 
-const SERVER_URL = 'http://192.168.80.179:5000';
+import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
 
 interface Message {
   id: string;
