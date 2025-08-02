@@ -1,48 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import {SERVER_URL} from '../../constants/config';
-
-
+import { SERVER_URL } from '../../constants/config';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
+  const [isSubmitting, setIsSubmitting] = useState(false); // <-- NEW STATE
 
   const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert('Validation Error', 'Please enter both email and password.');
-    return;
-  }
-
-  try {
-    const response = await fetch(`${SERVER_URL}/api/login`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await response.json();
-
-     if (response.ok) {
-  await SecureStore.setItemAsync('token', data.token);
-  await SecureStore.setItemAsync('user', JSON.stringify(data.user));
-  router.replace('./dashboard');
-} else {
-      Alert.alert('Login Failed', data.message || 'Invalid credentials.');
+    if (!email || !password) {
+      Alert.alert('Validation Error', 'Please enter both email and password.');
+      return;
     }
-  } catch (err) {
-    console.error('Login error:', err);
-    Alert.alert('Network Error', 'Could not connect to the server.');
-  }
-};
 
+    setIsSubmitting(true); // <-- SET LOADING
+
+    try {
+      const response = await fetch(`${SERVER_URL}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await SecureStore.setItemAsync('token', data.token);
+        await SecureStore.setItemAsync('user', JSON.stringify(data.user));
+        router.replace('./dashboard');
+      } else {
+        Alert.alert('Login Failed', data.message || 'Invalid credentials.');
+      }
+
+    } catch (err) {
+      console.error('Login error:', err);
+      Alert.alert('Network Error', 'Could not connect to the server.');
+    } finally {
+      setIsSubmitting(false); // <-- RESET LOADING
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -90,15 +92,19 @@ export default function Login() {
           </View>
 
           <Link href="./forgot" asChild>
-  <TouchableOpacity style={styles.forgotPassword}>
-    <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-  </TouchableOpacity>
-</Link>
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </Link>
 
-
-
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Sign In</Text>
+          <TouchableOpacity
+            style={[styles.loginButton, isSubmitting && styles.disabledButton]}
+            onPress={handleLogin}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.loginButtonText}>
+              {isSubmitting ? 'Signing in...' : 'Sign In'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -120,7 +126,6 @@ export default function Login() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -270,4 +275,7 @@ const styles = StyleSheet.create({
     fontFamily: 'LexendDeca-Regular',
     letterSpacing: 0.5,
   },
+  disabledButton: {
+  opacity: 0.6,
+}
 });

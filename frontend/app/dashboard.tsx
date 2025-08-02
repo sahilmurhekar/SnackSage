@@ -357,6 +357,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111',
     fontFamily: 'LexendDeca-Regular',
+    marginBottom:10
   },
   actionsContainer: {
     flexDirection: 'row',

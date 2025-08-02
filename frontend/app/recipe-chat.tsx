@@ -158,7 +158,7 @@ export default function RecipeChat() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <HeaderWithBack title="Recipe Assistant" />
+      <HeaderWithBack/>
       
       {recipeName && (
         <View style={styles.recipeHeader}>

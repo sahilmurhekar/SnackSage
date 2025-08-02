@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
+import { SERVER_URL } from '../constants/config';
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // <-- NEW STATE
 
   const handlePasswordReset = async () => {
     if (!email || !newPassword || !confirmPassword) {
@@ -19,6 +21,8 @@ export default function ForgotPassword() {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
+
+    setIsSubmitting(true); // <-- START LOADING
 
     try {
       const response = await fetch(`${SERVER_URL}/api/reset-password`, {
@@ -42,6 +46,8 @@ export default function ForgotPassword() {
     } catch (err) {
       console.error('Reset error:', err);
       Alert.alert('Error', 'Could not connect to server');
+    } finally {
+      setIsSubmitting(false); // <-- END LOADING
     }
   };
 
@@ -160,12 +166,14 @@ export default function ForgotPassword() {
 
       <TouchableOpacity
         onPress={handlePasswordReset}
+        disabled={isSubmitting}
         style={{
           backgroundColor: '#111111',
           paddingVertical: 16,
           borderRadius: 12,
           alignItems: 'center',
-          marginTop: 12
+          marginTop: 12,
+          opacity: isSubmitting ? 0.6 : 1 // <-- VISUAL DISABLE
         }}
       >
         <Text style={{
@@ -174,7 +182,7 @@ export default function ForgotPassword() {
           fontFamily: 'LexendDeca-Regular',
           fontWeight: '600'
         }}>
-          Reset Password
+          {isSubmitting ? 'Resetting...' : 'Reset Password'}
         </Text>
       </TouchableOpacity>
     </View>
