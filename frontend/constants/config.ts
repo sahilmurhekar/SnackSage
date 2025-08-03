@@ -1,1 +1,1 @@
-export const SERVER_URL = 'http://192.168.80.179:5000'
+export const SERVER_URL = 'https://snacksage.onrender.com';
