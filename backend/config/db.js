@@ -10,8 +10,6 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(uri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       dbName: 'SNACKSAGE_DB'
     });
 
