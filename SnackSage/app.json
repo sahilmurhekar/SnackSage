@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SnackSage",
-    "slug": "snacksage",
+    "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./app/assets/images/logo.png",
@@ -51,7 +51,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a7c6d4fc-bf95-4715-be5b-7d87038ae974"
+        "projectId": ""
       }
     },
     "owner": "sahilmurhekar"
