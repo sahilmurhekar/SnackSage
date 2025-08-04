@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 
 import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
 const { width: screenWidth } = Dimensions.get('window');
@@ -50,6 +52,70 @@ export default function Dashboard() {
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+
+  useEffect(() => {
+    fetchData();
+    registerForPushNotificationsAsync();
+    checkExpiringItemsAndNotify();
+  }, []);
+
+  const registerForPushNotificationsAsync = async () => {
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        alert('Failed to get push token for notifications!');
+        return;
+      }
+
+      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      console.log('Expo Push Token:', token);
+    } else {
+      alert('Must use physical device for Push Notifications');
+    }
+  };
+
+  const checkExpiringItemsAndNotify = async () => {
+    const token = await SecureStore.getItemAsync('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${SERVER_URL}/api/items/expiring-soon`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.expiringSoon && data.expiringSoon.length > 0) {
+        for (const item of data.expiringSoon) {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: '⏰ Item Expiring Soon',
+              body: `${item.name} is expiring on ${new Date(item.expirationDate).toLocaleDateString()}`,
+              sound: true,
+            },
+            trigger: null, // send immediately
+          });
+
+          await new Promise((res) => setTimeout(res, 5000)); // delay 5 seconds for testing
+        }
+      }
+    } catch (err) {
+      console.error('Notification fetch error:', err);
+    }
+  };
+
+  
   const fetchData = async () => {
     try {
       let token = await SecureStore.getItemAsync('token');
