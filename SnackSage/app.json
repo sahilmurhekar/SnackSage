@@ -4,34 +4,24 @@
     "slug": "SnackSage",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./app/assets/images/logo.png",
-    "scheme": "SnackSage",
+    "icon": "./app/assets/images/icon.png",
+    "scheme": "snacksage",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "sahilmurhekar.snacksage"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./app/assets/images/logo.png",
+        "foregroundImage": "./app/assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "sahilmurhekar.snacksage",
-      "label": "SnackSage"
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./app/assets/images/favicon.png",
-      "build": {
-        "babel": {
-          "include": [
-            "@ui-kitten/components"
-          ]
-        }
-      }
+      "favicon": "./app/assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -43,8 +33,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ],
-      "expo-secure-store"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -52,7 +41,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "293f9e85-3bcd-40a3-b618-074bcc7242eb"
+        "projectId": "46f18aef-891c-4b9c-9ef4-4b2c8e567d39"
       }
     },
     "owner": "sahilmurhekar"
