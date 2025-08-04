@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SnackSage",
-    "slug": "frontend",
+    "slug": "snacksage",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./app/assets/images/logo.png",
