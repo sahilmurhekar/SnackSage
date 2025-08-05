@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,15 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
-  Dimensions
+  Dimensions,
+  Platform
 } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
+import PushNotification, { Importance } from 'react-native-push-notification';
 
-import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
+import { SERVER_URL } from '../constants/config';
+
 const { width: screenWidth } = Dimensions.get('window');
 
 interface User {
@@ -44,6 +45,12 @@ interface RecipeRecommendation {
   missingIngredients: string[];
 }
 
+interface ExpiringItem {
+  _id: string;
+  name: string;
+  expirationDate: string;
+}
+
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -51,34 +58,87 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  
+  const notifiedItems = useRef<Set<string>>(new Set());
+  const notificationInterval = useRef<number | null>(null);
 
-
+  // Initialize Push Notifications
   useEffect(() => {
-    fetchData();
-    registerForPushNotificationsAsync();
-    checkExpiringItemsAndNotify();
+    configurePushNotifications();
   }, []);
 
-  const registerForPushNotificationsAsync = async () => {
-    if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+  // Start notification checking on mount
+  useEffect(() => {
+    fetchData();
+    startPeriodicNotificationCheck();
 
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
+    return () => {
+      if (notificationInterval.current) {
+        clearInterval(notificationInterval.current);
       }
+    };
+  }, []);
 
-      if (finalStatus !== 'granted') {
-        alert('Failed to get push token for notifications!');
-        return;
-      }
+  const configurePushNotifications = () => {
+    // Configure the notification settings
+    PushNotification.configure({
+      // Called when token is generated (iOS and Android)
+      onRegister: function (token) {
+        console.log('TOKEN:', token);
+      },
 
-      const token = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log('Expo Push Token:', token);
-    } else {
-      alert('Must use physical device for Push Notifications');
+      // Called when a remote is received or opened, or local notification is opened
+      onNotification: function (notification) {
+        console.log('NOTIFICATION:', notification);
+      },
+
+      // Should the initial notification be popped automatically
+      popInitialNotification: true,
+
+      // (Optional) Called when Registered Action is pressed and invokeApp is false, if true onNotification will be called (Android)
+      onAction: function (notification) {
+        console.log('ACTION:', notification.action);
+        console.log('NOTIFICATION:', notification);
+      },
+
+      // (optional) Called when the user fails to register for remote notifications
+      onRegistrationError: function(err) {
+        console.error(err.message, err);
+      },
+
+      // IOS ONLY (optional): default: all - Permissions to register
+      permissions: {
+        alert: true,
+        badge: true,
+        sound: true,
+      },
+
+      requestPermissions: Platform.OS === 'ios',
+    });
+
+    // Create notification channel for Android
+    if (Platform.OS === 'android') {
+      PushNotification.createChannel(
+        {
+          channelId: 'expiring-items-channel',
+          channelName: 'Expiring Items',
+          channelDescription: 'Notifications for items that are expiring soon',
+          playSound: true,
+          soundName: 'default',
+          importance: Importance.HIGH,
+          vibrate: true,
+        },
+        (created) => console.log(`Channel created: ${created}`)
+      );
     }
+  };
+
+  const startPeriodicNotificationCheck = () => {
+    checkExpiringItemsAndNotify();
+    
+    notificationInterval.current = setInterval(() => {
+      checkExpiringItemsAndNotify();
+    }, 5000);
   };
 
   const checkExpiringItemsAndNotify = async () => {
@@ -97,17 +157,31 @@ export default function Dashboard() {
       const data = await response.json();
 
       if (data.expiringSoon && data.expiringSoon.length > 0) {
-        for (const item of data.expiringSoon) {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: '⏰ Item Expiring Soon',
-              body: `${item.name} is expiring on ${new Date(item.expirationDate).toLocaleDateString()}`,
-              sound: true,
-            },
-            trigger: null, // send immediately
-          });
+        const newExpiringItems = data.expiringSoon.filter(
+          (item: ExpiringItem) => !notifiedItems.current.has(item._id)
+        );
 
-          await new Promise((res) => setTimeout(res, 5000)); // delay 5 seconds for testing
+        if (newExpiringItems.length > 0) {
+          console.log(`Found ${newExpiringItems.length} new expiring items to notify about`);
+          
+          newExpiringItems.forEach((item: ExpiringItem, index: number) => {
+            setTimeout(() => {
+              PushNotification.localNotification({
+                channelId: 'expiring-items-channel', // Android only
+                title: '⏰ Item Expiring Soon',
+                message: `${item.name} is expiring on ${new Date(item.expirationDate).toLocaleDateString()}`,
+                playSound: true,
+                soundName: 'default',
+                actions: ['View Item'],
+                userInfo: { itemId: item._id, itemName: item.name },
+              });
+              
+              notifiedItems.current.add(item._id);
+              console.log(`Notification sent for: ${item.name}`);
+            }, index * 1000);
+          });
+        } else {
+          console.log('No new expiring items to notify about');
         }
       }
     } catch (err) {
@@ -115,7 +189,24 @@ export default function Dashboard() {
     }
   };
 
-  
+  const sendTestNotification = () => {
+    PushNotification.localNotification({
+      channelId: 'expiring-items-channel',
+      title: '🔔 Test Notification',
+      message: 'This is a manual test notification using react-native-push-notification.',
+      playSound: true,
+      soundName: 'default',
+    });
+  };
+
+  const clearNotificationHistory = () => {
+    notifiedItems.current.clear();
+    // Clear all scheduled notifications
+    PushNotification.cancelAllLocalNotifications();
+    console.log('Notification history cleared');
+    Alert.alert('Success', 'Notification history cleared. You will receive notifications for expiring items again.');
+  };
+
   const fetchData = async () => {
     try {
       let token = await SecureStore.getItemAsync('token');
@@ -129,7 +220,6 @@ export default function Dashboard() {
         'Content-Type': 'application/json',
       };
 
-      // Fetch user data
       const userRes = await fetch(`${SERVER_URL}/api/me`, { method: 'GET', headers });
       if (userRes.ok) {
         const userData = await userRes.json();
@@ -138,16 +228,13 @@ export default function Dashboard() {
         throw new Error('Authentication failed');
       }
 
-      // Fetch dashboard stats
       const statsRes = await fetch(`${SERVER_URL}/api/items/dashboard-stats`, { method: 'GET', headers });
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
       }
 
-      // Fetch recipe recommendations
       fetchRecommendations(headers);
-
     } catch (err: any) {
       if (err.message.includes('Authentication failed')) {
         await SecureStore.deleteItemAsync('token');
@@ -164,7 +251,6 @@ export default function Dashboard() {
   const fetchRecommendations = async (headers?: any) => {
     try {
       setRecommendationsLoading(true);
-      
       if (!headers) {
         const token = await SecureStore.getItemAsync('token');
         headers = {
@@ -173,11 +259,11 @@ export default function Dashboard() {
         };
       }
 
-      const recRes = await fetch(`${SERVER_URL}/api/recipes/recommendations`, { 
-        method: 'GET', 
-        headers 
+      const recRes = await fetch(`${SERVER_URL}/api/recipes/recommendations`, {
+        method: 'GET',
+        headers
       });
-      
+
       if (recRes.ok) {
         const recData = await recRes.json();
         setRecommendations(recData.recommendations || []);
@@ -189,31 +275,23 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
   };
 
   const handleLogout = async () => {
+    if (notificationInterval.current) {
+      clearInterval(notificationInterval.current);
+    }
+    // Cancel all notifications on logout
+    PushNotification.cancelAllLocalNotifications();
     await SecureStore.deleteItemAsync('token');
     router.replace('/');
   };
 
   const handleRecipePress = (recipe: RecipeRecommendation) => {
     router.push(`./recipe-chat?recipeName=${encodeURIComponent(recipe.name)}`);
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty.toLowerCase()) {
-      case 'easy': return '#28a745';
-      case 'medium': return '#ffc107';
-      case 'hard': return '#dc3545';
-      default: return '#6c757d';
-    }
   };
 
   const renderRecipeCard = (recipe: RecipeRecommendation, index: number) => (
@@ -223,34 +301,8 @@ export default function Dashboard() {
       onPress={() => handleRecipePress(recipe)}
       activeOpacity={0.8}
     >
-      <View style={styles.recipeHeader}>
-        <Text style={styles.recipeName} numberOfLines={2}>{recipe.name}</Text>
-        <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(recipe.difficulty) }]}>
-          <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
-        </View>
-      </View>
-      
-      <Text style={styles.recipeDescription} numberOfLines={3}>
-        {recipe.description}
-      </Text>
-      
-      <View style={styles.recipeDetails}>
-        <Text style={styles.recipeTime}>⏱️ {recipe.cookingTime}</Text>
-        <Text style={styles.recipeCuisine}>🍽️ {recipe.cuisine}</Text>
-      </View>
-      
-      <View style={styles.ingredientsSection}>
-        <Text style={styles.ingredientsTitle}>Available: {recipe.availableIngredients.length}/{recipe.mainIngredients.length}</Text>
-        <Text style={styles.ingredientsList} numberOfLines={2}>
-          {recipe.availableIngredients.slice(0, 3).join(', ')}
-          {recipe.availableIngredients.length > 3 && '...'}
-        </Text>
-      </View>
-      
-      <View style={styles.recipeFooter}>
-        <Text style={styles.healthScore}>Health Score: {recipe.healthScore}/10</Text>
-        <Text style={styles.servings}>Serves {recipe.servings}</Text>
-      </View>
+      <Text style={{ fontWeight: 'bold' }}>{recipe.name}</Text>
+      <Text>{recipe.description}</Text>
     </TouchableOpacity>
   );
 
@@ -269,91 +321,32 @@ export default function Dashboard() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerContent}>
-        <View>
-          <Text style={styles.greeting}>Hello, {user?.name || 'User'} 👋</Text>
-          <Text style={styles.subGreeting}>Welcome to SnackSage</Text>
-        </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.greeting}>Hello, {user?.name || 'User'} 👋</Text>
+        <TouchableOpacity onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Quick Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('./add-item')}>
-            <Text style={styles.actionIcon}>➕</Text>
-            <Text style={styles.actionText}>Add Items</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('./inventory')}>
-            <Text style={styles.actionIcon}>📦</Text>
-            <Text style={styles.actionText}>View Inventory</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Recipe Recommendations Carousel */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>AI Recipe Suggestions</Text>
-          {recommendationsLoading && <ActivityIndicator size="small" color="#111" />}
-        </View>
-        
-        {recommendations.length > 0 ? (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.carouselContainer}
-          >
-            {recommendations.map((recipe, index) => renderRecipeCard(recipe, index))}
-          </ScrollView>
-        ) : (
-          <View style={styles.noRecommendations}>
-            <Text style={styles.noRecommendationsText}>
-              {recommendationsLoading 
-                ? 'Generating personalized recipes...' 
-                : 'Add items to your inventory to get recipe suggestions!'
-              }
-            </Text>
-            {!recommendationsLoading && (
-              <TouchableOpacity 
-                style={styles.addItemsButton} 
-                onPress={() => router.push('./add-item')}
-              >
-                <Text style={styles.addItemsButtonText}>Add Items</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </View>
-
-      {/* Inventory Overview */}
-      {stats && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Inventory Overview</Text>
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.totalItems}</Text>
-              <Text style={styles.statLabel}>Total Items</Text>
-            </View>
-            <View style={[styles.statCard, styles.warningCard]}>
-              <Text style={styles.statNumber}>{stats.expiringSoonCount}</Text>
-              <Text style={styles.statLabel}>Expiring Soon</Text>
-            </View>
-            <View style={[styles.statCard, styles.dangerCard]}>
-              <Text style={styles.statNumber}>{stats.expiredCount}</Text>
-              <Text style={styles.statLabel}>Expired</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.recentItemsCount}</Text>
-              <Text style={styles.statLabel}>Added This Week</Text>
-            </View>
-          </View>
-        </View>
+      <Text style={styles.sectionTitle}>AI Recipe Suggestions</Text>
+      {recommendationsLoading ? (
+        <ActivityIndicator size="small" color="#111" />
+      ) : (
+        recommendations.map((recipe, index) => renderRecipeCard(recipe, index))
       )}
 
-      <View style={{ height: 20 }} />
+      <TouchableOpacity
+        onPress={sendTestNotification}
+        style={styles.testButton}
+      >
+        <Text style={styles.testButtonText}>Send Test Notification (RN Push)</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={clearNotificationHistory}
+        style={[styles.testButton, { backgroundColor: '#dc3545' }]}
+      >
+        <Text style={styles.testButtonText}>Clear Notification History</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -374,238 +367,42 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: '#666',
-    fontFamily: 'LexendDeca-Regular',
-    marginBottom: 20,
   },
   headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    marginBottom: 20,
   },
   greeting: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#111',
-    fontFamily: 'LexendDeca-Regular',
-    marginBottom: 4,
-  },
-  subGreeting: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  logoutButton: {
-    backgroundColor: '#111111',
-    paddingHorizontal: 16,
-    marginTop: 8,
-    paddingVertical: 8,
-    borderRadius: 8,
   },
   logoutText: {
     fontSize: 14,
-    color: 'white',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  section: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    color: 'red',
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111',
-    fontFamily: 'LexendDeca-Regular',
-    marginBottom:10
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  actionButton: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    width: '48%',
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111',
-    fontFamily: 'LexendDeca-Regular',
-    textAlign: 'center',
-  },
-  carouselContainer: {
-    paddingLeft: 0,
-    paddingRight: 24,
+    paddingHorizontal: 24,
+    marginBottom: 10,
   },
   recipeCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    width: screenWidth * 0.75,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recipeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  recipeName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111',
-    fontFamily: 'LexendDeca-Regular',
-    flex: 1,
-    marginRight: 8,
-  },
-  difficultyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  difficultyText: {
-    fontSize: 10,
-    color: 'white',
-    fontWeight: 'bold',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  recipeDescription: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'LexendDeca-Regular',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  recipeDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  recipeTime: {
-    fontSize: 12,
-    color: '#888',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  recipeCuisine: {
-    fontSize: 12,
-    color: '#888',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  ingredientsSection: {
-    marginBottom: 12,
-  },
-  ingredientsTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#111',
-    fontFamily: 'LexendDeca-Regular',
-    marginBottom: 4,
-  },
-  ingredientsList: {
-    fontSize: 11,
-    color: '#666',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  recipeFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  healthScore: {
-    fontSize: 11,
-    color: '#28a745',
-    fontWeight: '600',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  servings: {
-    fontSize: 11,
-    color: '#666',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  noRecommendations: {
-    alignItems: 'center',
-    padding: 24,
     backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  noRecommendationsText: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'LexendDeca-Regular',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  addItemsButton: {
-    backgroundColor: '#111',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    padding: 16,
+    margin: 16,
     borderRadius: 8,
   },
-  addItemsButtonText: {
+  testButton: {
+    backgroundColor: '#111',
+    margin: 20,
+    padding: 12,
+    borderRadius: 10,
+  },
+  testButtonText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'LexendDeca-Regular',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    width: '48%',
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  warningCard: {
-    backgroundColor: '#fff3cd',
-    borderColor: '#ffeaa7',
-  },
-  dangerCard: {
-    backgroundColor: '#f8d7da',
-    borderColor: '#f5c6cb',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111',
-    fontFamily: 'LexendDeca-Regular',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'LexendDeca-Regular',
     textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
