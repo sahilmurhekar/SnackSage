@@ -7,7 +7,7 @@ class GeminiService {
       throw new Error('GEMINI_API_KEY is not defined in environment variables');
     }
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
   }
 
   // Generate recipe recommendations based on inventory
