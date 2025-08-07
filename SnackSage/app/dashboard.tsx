@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
   },
   recipesScrollContainer: {
     paddingRight: 20,
-    paddingLeft: 20,
+    paddingLeft: 10,
     paddingBottom: 10,
   },
   mediumRecipeCard: {

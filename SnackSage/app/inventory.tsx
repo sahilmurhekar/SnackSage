@@ -215,7 +215,7 @@ export default function Inventory() {
 
   return (
     <View style={styles.container}>
-      <HeaderWithBack title="My Inventory" />
+      <HeaderWithBack/>
 
       {/* Header Stats */}
       <View style={styles.headerStats}>
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   headerStats: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    paddingVertical: 20,
+    paddingBottom: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -437,6 +437,7 @@ const styles = StyleSheet.create({
   searchAndFilters: {
     backgroundColor: '#ffffff',
     paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
     fontFamily: 'LexendDeca-Regular',
   },
   categoryContainer: {
-    marginBottom: 24,
+    marginTop: 16,
     paddingHorizontal: 24,
   },
   categoryHeader: {

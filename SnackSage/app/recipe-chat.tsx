@@ -162,7 +162,7 @@ export default function RecipeChat() {
       
       {recipeName && (
         <View style={styles.recipeHeader}>
-          <Text style={styles.recipeTitle}>🍳 {decodeURIComponent(recipeName)}</Text>
+          <Text style={styles.recipeTitle}>{decodeURIComponent(recipeName)}</Text>
         </View>
       )}
 
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
   },
   recipeTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#111',
     fontFamily: 'LexendDeca-Regular',
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   messageText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'LexendDeca-Regular',
     lineHeight: 22,
   },
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   disabledButton: { backgroundColor: '#ccc' },
   sendButtonText: {
