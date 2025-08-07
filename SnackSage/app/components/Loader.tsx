@@ -36,7 +36,7 @@ export default function Loader() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
 
-      <Image source={require('../assets/images/logo.png')} resizeMode="contain" style={{ width: 150, height: 150, marginBottom: 10 }} />
+      <Image source={require('../assets/images/logo.png')} resizeMode="contain" style={{ width: 150, height: 150, marginBottom: 15 }} />
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', height: 10 }}>
         <Animated.View style={{ width: 8, height: 8, borderRadius: 5, backgroundColor: '#111111', marginHorizontal: 5, transform: [{ translateY: dot1 }] }} />

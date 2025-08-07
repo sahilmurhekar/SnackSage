@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
 import { Link, router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { SERVER_URL } from '../../constants/config';
@@ -50,7 +50,8 @@ export default function Login() {
     <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.headerSection}>
-          <Text style={styles.title}>Welcome Back</Text>
+          <Image source={require('../assets/images/logo.png')} resizeMode="contain" style={{ width: 50, height: 50, marginBottom: 24,borderRadius:10 }} />
+          <Text style={styles.title}>Welcome to SnackSage</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
 
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     fontFamily: 'LexendDeca-Regular',
     color: '#111111',

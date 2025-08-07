@@ -1,4 +1,4 @@
-// Create new file: /frontend/app/edit-item.tsx
+//edit-item.tsx
 
 import React, { useState, useEffect } from 'react';
 import {
