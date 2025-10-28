@@ -38,7 +38,7 @@ export default function Register() {
   });
 
   const totalSteps = 5;
-  const dietOptions = ['omnivore', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo'];
+  const dietOptions = ['non vegeterian', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo'];
   const healthGoalOptions = ['weight loss', 'weight gain', 'muscle building', 'low sodium', 'low sugar', 'heart healthy'];
   const cuisineOptions = ['Indian', 'Mediterranean', 'Italian', 'Chinese', 'Mexican', 'American', 'Thai', 'Japanese'];
   const skillLevelOptions = ['beginner', 'intermediate', 'advanced'];
@@ -359,7 +359,7 @@ export default function Register() {
     <ScrollView style={styles.stepContainer} showsVerticalScrollIndicator={false}>
       <Text style={styles.stepTitle}>Final Setup</Text>
       <Text style={styles.stepSubtitle}>Let's complete your profile</Text>
-      
+
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Cuisine Preferences</Text>
         <Text style={styles.sectionSubtitle}>Select your favorite cuisines</Text>
@@ -463,8 +463,8 @@ export default function Register() {
         {renderCurrentStep()}
       </View>
       <View style={styles.navigationContainer}>
-        <TouchableOpacity 
-          style={[styles.backButton, isSubmitting && styles.disabledButton]} 
+        <TouchableOpacity
+          style={[styles.backButton, isSubmitting && styles.disabledButton]}
           onPress={handleBack}
           disabled={isSubmitting}
         >
@@ -472,8 +472,8 @@ export default function Register() {
             {currentStep === 1 ? 'Exit' : 'Back'}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.nextButton, isSubmitting && styles.disabledButton]} 
+        <TouchableOpacity
+          style={[styles.nextButton, isSubmitting && styles.disabledButton]}
           onPress={handleNext}
           disabled={isSubmitting}
         >

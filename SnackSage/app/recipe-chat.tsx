@@ -9,14 +9,16 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import * as Speech from 'expo-speech';
+import { MaterialIcons } from '@expo/vector-icons';
 import HeaderWithBack from './components/HeaderWithBack';
 
-import {SERVER_URL} from '../constants/config'; // Adjust the import path as necessary
+import { SERVER_URL } from '../constants/config';
 
 interface Message {
   id: string;
@@ -30,272 +32,416 @@ export default function RecipeChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTtsEnabled, setIsTtsEnabled] = useState(true);
+  /** Tracks which message (if any) is currently being spoken */
+  const [currentSpeakingId, setCurrentSpeakingId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // --------------------------------------------------------------
+  // 1. INITIAL WELCOME + AUTO-ASK RECIPE
+  // --------------------------------------------------------------
   useEffect(() => {
     if (recipeName) {
-      const initialMessage = `Can you provide me with a detailed recipe for ${recipeName}? Please include ingredients, step-by-step instructions, cooking time, and any helpful tips.`;
-      setInputText(initialMessage);
-
-      const welcomeMessage: Message = {
+      const decoded = decodeURIComponent(recipeName);
+      const welcome: Message = {
         id: Date.now().toString(),
-        text: `Hello! I'm your AI cooking assistant. I see you're interested in making ${recipeName}. Let me help you with that recipe!`,
+        text: `Hello! I'm your AI cooking assistant. I see you're interested in **${decoded}**. Let me help you with the recipe!`,
         isUser: false,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      setMessages([welcomeMessage]);
+      setMessages([welcome]);
+
+      const initialPrompt = `Can you provide me with a detailed recipe for ${decoded}? Please include ingredients, step-by-step instructions, cooking time, and any helpful tips.`;
+      setInputText(initialPrompt);
     }
   }, [recipeName]);
 
+  // --------------------------------------------------------------
+  // 2. TTS HELPERS
+  // --------------------------------------------------------------
+  const canSpeak = async () => {
+    try {
+      const voices = await Speech.getAvailableVoicesAsync();
+      return voices.length > 0;
+    } catch {
+      return false;
+    }
+  };
+
+  const speakMessage = async (messageId: string, rawText: string) => {
+    if (!isTtsEnabled) return;
+
+    // ---- stop any ongoing speech first ----
+    await Speech.stop();
+    setCurrentSpeakingId(null);
+
+    if (!(await canSpeak())) {
+      Alert.alert('TTS Unavailable', 'Check device TTS settings.');
+      return;
+    }
+
+    const voices = await Speech.getAvailableVoicesAsync();
+    const voice = voices.find(v => v.language.startsWith('en')) || voices[0];
+
+    const cleanText = rawText
+      .replace(/[#*_`]/g, '')
+      .replace(/\n+/g, '. ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleanText) return;
+
+    setCurrentSpeakingId(messageId);
+
+    Speech.speak(cleanText, {
+      language: 'en-US',
+      voice: voice.identifier,
+      pitch: 1.0,
+      rate: 0.95,
+      onStart: () => console.log('TTS started'),
+      onDone: () => {
+        console.log('TTS done');
+        setCurrentSpeakingId(null);
+      },
+      onStopped: () => setCurrentSpeakingId(null),
+      onError: (e) => {
+        console.warn('TTS error', e);
+        setCurrentSpeakingId(null);
+        Alert.alert('Speech error', 'Try again or check TTS settings.');
+      },
+    });
+  };
+
+  // --------------------------------------------------------------
+  // 3. SEND MESSAGE
+  // --------------------------------------------------------------
   const sendMessage = async () => {
     if (!inputText.trim()) return;
 
-    const userMessage: Message = {
+    const userMsg: Message = {
       id: Date.now().toString(),
       text: inputText.trim(),
       isUser: true,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsLoading(true);
+
+    // stop any playing speech
+    await Speech.stop();
+    setCurrentSpeakingId(null);
 
     try {
       const token = await SecureStore.getItemAsync('token');
       if (!token) {
-        Alert.alert("Authentication Error", "Please log in again.");
+        Alert.alert('Auth error', 'Please log in again.');
         router.replace('/');
         return;
       }
 
-      const response = await fetch(`${SERVER_URL}/api/recipes/chat/message`, {
+      const res = await fetch(`${SERVER_URL}/api/recipes/chat/message`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: userMessage.text, recipeName })
+        body: JSON.stringify({ message: userMsg.text, recipeName }),
       });
 
-      const raw = await response.text();
+      const raw = await res.text();
 
+      let data;
       try {
-        const data = JSON.parse(raw);
-
-        if (response.ok && data.reply) {
-          const aiMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            text: data.reply,
-            isUser: false,
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, aiMessage]);
-        } else {
-          throw new Error(data.message || 'Unexpected response from AI');
-        }
-      } catch (parseError) {
-        console.error('Failed to parse response:', raw);
-        Alert.alert("Server Error", "Invalid response received from server.");
-        setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
-          text: "Sorry, I couldn't understand the server response. Please try again later.",
-          isUser: false,
-          timestamp: new Date()
-        }]);
+        data = JSON.parse(raw);
+      } catch {
+        throw new Error('Invalid JSON from server');
       }
 
-    } catch (error) {
-      console.error('Chat error:', error);
-      Alert.alert('Network Error', 'Could not connect to server. Please try again.');
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        text: "Sorry, I encountered an error. Please try again.",
+      if (!res.ok || !data.reply) {
+        throw new Error(data.message || 'Server error');
+      }
+
+      const aiId = `${Date.now()}`;
+      const aiMsg: Message = {
+        id: aiId,
+        text: data.reply,
         isUser: false,
-        timestamp: new Date()
-      }]);
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, aiMsg]);
+
+      // **NO AUTO-SPEAK**
+      // (removed the setTimeout + speakMessage call)
+    } catch (err: any) {
+      console.error(err);
+      const errMsg: Message = {
+        id: `${Date.now()}-err`,
+        text: err.message?.includes('Network')
+          ? 'Network error – check your connection.'
+          : 'Something went wrong. Try again.',
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errMsg]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --------------------------------------------------------------
+  // 4. SCROLL TO BOTTOM
+  // --------------------------------------------------------------
   const scrollToBottom = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   };
-
   useEffect(() => {
     setTimeout(scrollToBottom, 100);
   }, [messages]);
 
-  const renderMessage = (message: Message) => (
-    <View 
-      key={message.id} 
-      style={[
-        styles.messageContainer,
-        message.isUser ? styles.userMessage : styles.aiMessage
-      ]}
+  // --------------------------------------------------------------
+  // 5. RENDER MESSAGE
+  // --------------------------------------------------------------
+  const renderMessage = (msg: Message) => (
+    <View
+      key={msg.id}
+      style={[styles.messageWrapper, msg.isUser ? styles.userWrapper : styles.aiWrapper]}
     >
-      {message.isUser ? (
-        <Text style={[styles.messageText, styles.userMessageText]}>
-          {message.text}
+      <View style={[styles.bubble, msg.isUser ? styles.userBubble : styles.aiBubble]}>
+        {msg.isUser ? (
+          <Text style={styles.userText}>{msg.text}</Text>
+        ) : (
+          <View style={styles.aiContent}>
+            <Markdown style={markdownStyles}>{msg.text}</Markdown>
+
+            <TouchableOpacity
+              style={styles.speakBtn}
+              onPress={() => {
+                if (currentSpeakingId === msg.id) {
+                  // stop current speech
+                  Speech.stop();
+                  setCurrentSpeakingId(null);
+                } else {
+                  speakMessage(msg.id, msg.text);
+                }
+              }}
+              disabled={!isTtsEnabled}
+            >
+              <MaterialIcons
+                // show "stop" only for the message that is speaking
+                name={currentSpeakingId === msg.id ? 'stop' : 'volume-up'}
+                size={18}
+                color={isTtsEnabled ? '#555' : '#bbb'}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Text style={[styles.time, msg.isUser ? styles.userTime : styles.aiTime]}>
+          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
-      ) : (
-        <Markdown >
-          {message.text}
-        </Markdown>
-      )}
-      <Text style={[
-        styles.timestamp,
-        message.isUser ? styles.userTimestamp : styles.aiTimestamp
-      ]}>
-        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </Text>
+      </View>
     </View>
   );
 
+  // --------------------------------------------------------------
+  // 6. UI
+  // --------------------------------------------------------------
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
-      <HeaderWithBack/>
-      
+      <HeaderWithBack />
+
       {recipeName && (
         <View style={styles.recipeHeader}>
-          <Text style={styles.recipeTitle}>{decodeURIComponent(recipeName)}</Text>
+          <Text style={styles.recipeTitle} numberOfLines={1}>
+            {decodeURIComponent(recipeName)}
+          </Text>
         </View>
       )}
 
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
+        style={styles.chatArea}
+        contentContainerStyle={styles.chatContent}
         showsVerticalScrollIndicator={false}
       >
         {messages.map(renderMessage)}
-        
+
         {isLoading && (
-          <View style={[styles.messageContainer, styles.aiMessage]}>
-            <View style={styles.typingIndicator}>
-              <ActivityIndicator size="small" color="#666" />
-              <Text style={styles.typingText}>AI is typing...</Text>
+          <View style={[styles.messageWrapper, styles.aiWrapper]}>
+            <View style={[styles.bubble, styles.aiBubble]}>
+              <View style={styles.typing}>
+                <ActivityIndicator size="small" color="#666" />
+                <Text style={styles.typingTxt}>AI is typing…</Text>
+              </View>
             </View>
           </View>
         )}
       </ScrollView>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Ask me anything about this recipe..."
-          placeholderTextColor="#888"
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity 
-          style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.disabledButton]}
-          onPress={sendMessage}
-          disabled={!inputText.trim() || isLoading}
+      {/* OPTIONAL TTS TOGGLE + TEST BUTTON */}
+      <View style={styles.ttsBar}>
+        <TouchableOpacity
+          onPress={() => setIsTtsEnabled(v => !v)}
+          style={styles.ttsToggle}
         >
-          <Text style={styles.sendButtonText}>Send</Text>
+          <MaterialIcons
+            name={isTtsEnabled ? 'record-voice-over' : 'voice-over-off'}
+            size={20}
+            color={isTtsEnabled ? '#111' : '#999'}
+          />
+          <Text style={styles.ttsLabel}>TTS {isTtsEnabled ? 'ON' : 'OFF'}</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => speakMessage('test', 'This is a test of text-to-speech.')}
+          style={styles.testBtn}
+        >
+          <Text style={styles.testTxt}>Test TTS</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.inputArea}>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Ask about the recipe…"
+            placeholderTextColor="#aaa"
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendBtn,
+              (!inputText.trim() || isLoading) && styles.sendBtnDisabled,
+            ]}
+            onPress={sendMessage}
+            disabled={!inputText.trim() || isLoading}
+          >
+            <MaterialIcons name="send" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
+// --------------------------------------------------------------
+// MARKDOWN STYLES
+// --------------------------------------------------------------
+const markdownStyles = {
+  body: { fontSize: 14, lineHeight: 20, color: '#1a1a1a' },
+  heading1: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
+  heading2: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  paragraph: { marginBottom: 6 },
+  list_item: { marginBottom: 3 },
+};
+
+// --------------------------------------------------------------
+// STYLES (unchanged)
+// --------------------------------------------------------------
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'white' },
+  container: { flex: 1, backgroundColor: '#fff' },
+
   recipeHeader: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    backgroundColor: '#f8f8f8',
+    paddingVertical: 12,
+    backgroundColor: '#fafafa',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#e8e8e8',
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   recipeTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#111',
-    fontFamily: 'LexendDeca-Regular',
-    textAlign: 'center',
   },
-  messagesContainer: { flex: 1, paddingHorizontal: 16 },
-  messagesContent: { paddingVertical: 16 },
-  messageContainer: { marginBottom: 16, maxWidth: '80%' },
-  userMessage: {
+
+  chatArea: { flex: 1 },
+  chatContent: { padding: 12 },
+
+  messageWrapper: { marginBottom: 12 },
+  userWrapper: { alignItems: 'flex-end' },
+  aiWrapper: { alignItems: 'flex-start' },
+
+  bubble: {
+    maxWidth: '80%',
+    borderRadius: 16,
+    padding: 10,
+  },
+  userBubble: { backgroundColor: '#111', borderBottomRightRadius: 4 },
+  aiBubble: { backgroundColor: '#f5f5f5', borderBottomLeftRadius: 4 },
+
+  userText: { fontSize: 14, color: '#fff', lineHeight: 20 },
+
+  aiContent: { flexDirection: 'column' },
+
+  speakBtn: {
     alignSelf: 'flex-end',
-    backgroundColor: '#111',
-    borderRadius: 18,
-    borderBottomRightRadius: 4,
-    padding: 12,
-  },
-  aiMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 18,
-    borderBottomLeftRadius: 4,
-    padding: 12,
-  },
-  messageText: {
-    fontSize: 14,
-    fontFamily: 'LexendDeca-Regular',
-    lineHeight: 22,
-  },
-  userMessageText: { color: 'white' },
-  aiMessageText: { color: '#111' },
-  timestamp: {
-    fontSize: 11,
     marginTop: 4,
-    fontFamily: 'LexendDeca-Regular',
+    padding: 4,
   },
-  userTimestamp: { color: '#ccc', textAlign: 'right' },
-  aiTimestamp: { color: '#888' },
-  typingIndicator: { flexDirection: 'row', alignItems: 'center' },
-  typingText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'LexendDeca-Regular',
-    fontStyle: 'italic',
+
+  time: {
+    fontSize: 10,
+    marginTop: 4,
   },
-  inputContainer: {
+  userTime: { color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
+  aiTime: { color: '#999' },
+
+  typing: { flexDirection: 'row', alignItems: 'center' },
+  typingTxt: { marginLeft: 8, fontSize: 13, color: '#666', fontStyle: 'italic' },
+
+  ttsBar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'white',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#fafafa',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#e8e8e8',
   },
-  textInput: {
+  ttsToggle: { flexDirection: 'row', alignItems: 'center' },
+  ttsLabel: { marginLeft: 6, fontSize: 13, color: '#111' },
+  testBtn: { paddingHorizontal: 12, paddingVertical: 4 },
+  testTxt: { fontSize: 13, color: '#0066cc' },
+
+  inputArea: {
+    padding: 12,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e8e8e8',
+  },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  input: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    fontFamily: 'LexendDeca-Regular',
-    backgroundColor: '#f8f8f8',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: '#fafafa',
     maxHeight: 100,
-    marginRight: 12,
+    minHeight: 40,
+    color: '#111',
+    marginRight: 8,
   },
-  sendButton: {
-    backgroundColor: '#111',
+  sendBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    backgroundColor: '#111',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  disabledButton: { backgroundColor: '#ccc' },
-  sendButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'LexendDeca-Regular',
-  },
+  sendBtnDisabled: { backgroundColor: '#ccc' },
 });

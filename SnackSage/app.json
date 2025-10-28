@@ -8,10 +8,21 @@
     "scheme": "snacksage",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "permissions": [
+      "RECORD_AUDIO"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "This app needs access to microphone to record voice messages",
+        "NSSpeechRecognitionUsageDescription": "This app needs access to speech recognition to convert voice to text"
+      }
     },
     "android": {
+      "permissions": [
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./app/assets/images/icon.png",
         "backgroundColor": "#ffffff"
@@ -34,7 +45,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
@@ -45,6 +57,12 @@
         "projectId": "46f18aef-891c-4b9c-9ef4-4b2c8e567d39"
       }
     },
-    "owner": "sahilmurhekar"
+    "owner": "sahilmurhekar",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/46f18aef-891c-4b9c-9ef4-4b2c8e567d39"
+    }
   }
 }

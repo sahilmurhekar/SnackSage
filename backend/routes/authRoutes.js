@@ -8,6 +8,19 @@ router.post('/login', login);
 router.post('/reset-password', resetPassword);
 
 const authMiddleware = require('../middleware/authMiddleware');
+router.post('/push-token', authMiddleware, async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { pushToken },
+      { new: true }
+    ).select('-password');
+    res.json({ message: 'Push token updated', user });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 const User = require('../models/User');
 
 router.get('/me', authMiddleware, async (req, res) => {

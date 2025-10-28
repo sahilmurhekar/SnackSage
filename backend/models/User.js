@@ -8,6 +8,10 @@ const userSchema = new mongoose.Schema({
     default: () => uuidv4(),
     required: true
   },
+  pushToken: {
+  type: String,
+  default: null
+},
   name: String,
   email: { type: String, unique: true },
   password: String,

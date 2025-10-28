@@ -1,5 +1,5 @@
 //add-item.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,15 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  StyleSheet
+  StyleSheet,
+  Modal
 } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { CameraView, Camera } from 'expo-camera';
 import HeaderWithBack from './components/HeaderWithBack';
-import {SERVER_URL} from '../constants/config';
+import { SERVER_URL } from '../constants/config';
 
 interface ItemData {
   name: string;
@@ -39,6 +41,9 @@ export default function AddItem() {
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scanned, setScanned] = useState(false);
 
   const categories = [
     { label: 'Vegetables', value: 'vegetables' },
@@ -58,6 +63,65 @@ export default function AddItem() {
     'pieces', 'kg', 'g', 'lb', 'oz', 'l', 'ml',
     'cups', 'tbsp', 'tsp', 'packets', 'cans', 'bottles'
   ];
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    })();
+  }, []);
+
+  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+    setScanned(true);
+    try {
+      const scannedData = JSON.parse(data);
+
+      // Validate the scanned data structure
+      if (scannedData.name && scannedData.category) {
+        const newItemData: ItemData = {
+          name: scannedData.name || '',
+          category: scannedData.category || 'other',
+          quantity: {
+            amount: scannedData.quantity?.amount || 1,
+            unit: scannedData.quantity?.unit || 'pieces'
+          },
+          expirationDate: scannedData.expirationDate
+            ? new Date(scannedData.expirationDate)
+            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          notes: scannedData.notes || ''
+        };
+
+        setItemData(newItemData);
+        setShowScanner(false);
+        Alert.alert('Success', 'Item details loaded from QR code!');
+      } else {
+        Alert.alert('Invalid QR Code', 'The QR code does not contain valid item data.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not parse QR code data. Please try again.');
+      console.error('QR parse error:', error);
+    }
+
+    // Reset scanned state after 2 seconds to allow rescanning
+    setTimeout(() => setScanned(false), 2000);
+  };
+
+  const openScanner = async () => {
+    if (hasPermission === null) {
+      Alert.alert('Permission', 'Requesting camera permission...');
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+      if (status === 'granted') {
+        setShowScanner(true);
+        setScanned(false);
+      }
+    } else if (hasPermission === false) {
+      Alert.alert('No Permission', 'Camera permission is required to scan QR codes.');
+    } else {
+      setShowScanner(true);
+      setScanned(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!itemData.name.trim()) {
@@ -114,9 +178,10 @@ export default function AddItem() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <HeaderWithBack/>
+      <HeaderWithBack />
 
       <View style={styles.form}>
+
         {/* Item Name */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Item Name *</Text>
@@ -224,7 +289,9 @@ export default function AddItem() {
                       {unit}
                     </Text>
                   </TouchableOpacity>
+
                 ))}
+
               </View>
             </ScrollView>
           </View>
@@ -277,7 +344,55 @@ export default function AddItem() {
             {isSubmitting ? 'Adding...' : 'Add Item'}
           </Text>
         </TouchableOpacity>
+        {/* QR Scanner Button */}
+        <TouchableOpacity
+          style={styles.scanButton}
+          onPress={openScanner}
+        >
+          <Text style={styles.scanButtonText}>📷 Scan QR Code</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* QR Scanner Modal */}
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View style={styles.scannerContainer}>
+          <CameraView
+            style={styles.camera}
+            facing="back"
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr'],
+            }}
+          >
+            <View style={styles.scannerOverlay}>
+              <View style={styles.scannerHeader}>
+                <Text style={styles.scannerTitle}>Scan QR Code</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setShowScanner(false)}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.scannerFrame}>
+                <View style={[styles.frameCorner, styles.topLeft]} />
+                <View style={[styles.frameCorner, styles.topRight]} />
+                <View style={[styles.frameCorner, styles.bottomLeft]} />
+                <View style={[styles.frameCorner, styles.bottomRight]} />
+              </View>
+
+              <Text style={styles.scannerInstruction}>
+                Position the QR code within the frame
+              </Text>
+            </View>
+          </CameraView>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -289,6 +404,22 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 24,
+  },
+  scanButton: {
+    backgroundColor: '#111',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  scanButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'LexendDeca-Regular',
   },
   inputGroup: {
     marginBottom: 24,
@@ -414,7 +545,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 8,
   },
   disabledButton: {
     opacity: 0.6,
@@ -423,6 +554,86 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'LexendDeca-Regular',
+  },
+  scannerContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  camera: {
+    flex: 1,
+  },
+  scannerOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  scannerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 60,
+  },
+  scannerTitle: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'LexendDeca-Regular',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  scannerFrame: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 100,
+  },
+  frameCorner: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderColor: '#4CAF50',
+  },
+  topLeft: {
+    top: -150,
+    left: -150,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+  },
+  topRight: {
+    top: -150,
+    right: -150,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+  },
+  bottomLeft: {
+    bottom: -150,
+    left: -150,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+  },
+  bottomRight: {
+    bottom: -150,
+    right: -150,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+  },
+  scannerInstruction: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+    padding: 20,
     fontFamily: 'LexendDeca-Regular',
   },
 });

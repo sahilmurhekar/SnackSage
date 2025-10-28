@@ -73,7 +73,7 @@ export default function Dashboard() {
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  
+
   const notifiedItems = useRef<Set<string>>(new Set());
   const schedulerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -168,10 +168,10 @@ export default function Dashboard() {
 
         if (newExpiringItems.length > 0) {
           console.log(`Found ${newExpiringItems.length} new expiring items to notify about`);
-          
+
           for (let i = 0; i < newExpiringItems.length; i++) {
             const item = newExpiringItems[i];
-            
+
             setTimeout(async () => {
               try {
                 await Notifications.scheduleNotificationAsync({
@@ -179,15 +179,15 @@ export default function Dashboard() {
                     title: '⏰ Item Expiring Soon',
                     body: `${item.name} is expiring on ${new Date(item.expirationDate).toLocaleDateString()}`,
                     sound: 'default',
-                    data: { 
-                      itemId: item._id, 
+                    data: {
+                      itemId: item._id,
                       itemName: item.name,
                       type: 'expiring_item'
                     },
                   },
                   trigger: null,
                 });
-                
+
                 notifiedItems.current.add(item._id);
                 console.log(`Notification sent for: ${item.name}`);
               } catch (error) {
@@ -331,28 +331,28 @@ export default function Dashboard() {
   // Enhanced interactive donut chart component
   const DonutChart = ({ categoryStats }: { categoryStats: Array<{ _id: string; count: number }> }) => {
     const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
-    
+
     const total = categoryStats.reduce((sum, cat) => sum + cat.count, 0);
     const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#14b8a6'];
-    
+
     const topCategories = categoryStats.slice(0, 4);
     const centerSize = 80;
-    
+
     const handleSegmentPress = (index: number) => {
       setSelectedSegment(selectedSegment === index ? null : index);
     };
-    
+
     return (
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Pantry Distribution</Text>
         <View style={styles.donutChartWrapper}>
           <View style={styles.donutChart}>
-            <View 
+            <View
               style={[
-                styles.donutCenter, 
-                { 
-                  width: centerSize, 
-                  height: centerSize, 
+                styles.donutCenter,
+                {
+                  width: centerSize,
+                  height: centerSize,
                   borderRadius: centerSize / 2,
                 }
               ]}
@@ -365,25 +365,25 @@ export default function Dashboard() {
               </Text>
             </View>
           </View>
-          
+
           {/* Interactive Legend */}
           <View style={styles.chartLegend}>
             {topCategories.map((category, index) => (
-              <TouchableOpacity 
-                key={category._id} 
+              <TouchableOpacity
+                key={category._id}
                 style={[
                   styles.legendItem,
                   selectedSegment === index && styles.selectedLegendItem
                 ]}
                 onPress={() => handleSegmentPress(index)}
               >
-                <View 
+                <View
                   style={[
-                    styles.legendColor, 
-                    { 
+                    styles.legendColor,
+                    {
                       backgroundColor: colors[index % colors.length],
                     }
-                  ]} 
+                  ]}
                 />
                 <Text style={[
                   styles.legendText,
@@ -412,11 +412,11 @@ export default function Dashboard() {
           <Text style={styles.mediumDifficultyText}>{recipe.difficulty}</Text>
         </View>
       </View>
-      
+
       <Text style={styles.mediumRecipeDescription} numberOfLines={3}>
         {recipe.description}
       </Text>
-      
+
       <View style={styles.mediumRecipeInfo}>
         <View style={styles.mediumInfoItem}>
           <Text style={styles.mediumInfoIcon}>⏱️</Text>
@@ -431,7 +431,7 @@ export default function Dashboard() {
           <Text style={styles.mediumInfoText}>{recipe.healthScore}/10</Text>
         </View>
       </View>
-      
+
       <View style={styles.mediumIngredientInfo}>
         <View style={styles.mediumIngredientBadge}>
           <Text style={styles.mediumIngredientBadgeText}>✓ {recipe.availableIngredients.length} available</Text>
@@ -465,8 +465,8 @@ export default function Dashboard() {
             <Text style={styles.greeting}>Hi, {user?.name || 'User'}!</Text>
             <Text style={styles.subGreeting}>Your kitchen at a glance</Text>
           </View>
-          <TouchableOpacity 
-            onPress={() => setDropdownVisible(true)} 
+          <TouchableOpacity
+            onPress={() => setDropdownVisible(true)}
             style={styles.menuButton}
           >
             <Text style={styles.menuText}>•••</Text>
@@ -481,13 +481,13 @@ export default function Dashboard() {
         animationType="fade"
         onRequestClose={() => setDropdownVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.dropdownOverlay}
           activeOpacity={1}
           onPress={() => setDropdownVisible(false)}
         >
           <View style={styles.dropdownMenu}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.dropdownItem}
               onPress={handleProfile}
             >
@@ -495,7 +495,7 @@ export default function Dashboard() {
               <Text style={styles.dropdownItemText}>Profile</Text>
             </TouchableOpacity>
             <View style={styles.dropdownDivider} />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.dropdownItem}
               onPress={handleDropdownLogout}
             >
@@ -520,18 +520,18 @@ export default function Dashboard() {
             {stats.categoryStats && stats.categoryStats.length > 0 && (
               <DonutChart categoryStats={stats.categoryStats} />
             )}
-            
+
             <View style={styles.inventoryStatsGrid}>
               <View style={styles.inventoryStatCard}>
                 <Text style={styles.inventoryStatNumber}>{stats.totalItems}</Text>
                 <Text style={styles.inventoryStatLabel}>Total Items</Text>
               </View>
-              
+
               <View style={[styles.inventoryStatCard, styles.warningCard]}>
                 <Text style={styles.inventoryStatNumber}>{stats.expiringSoonCount}</Text>
                 <Text style={styles.inventoryStatLabel}>Expiring Soon</Text>
               </View>
-              
+
               <View style={[styles.inventoryStatCard, styles.dangerCard]}>
                 <Text style={styles.inventoryStatNumber}>{stats.expiredCount}</Text>
                 <Text style={styles.inventoryStatLabel}>Expired</Text>
@@ -545,22 +545,22 @@ export default function Dashboard() {
         <View style={styles.recipesSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recipe Suggestions</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => fetchRecommendations()}
               style={styles.reloadButton}
             >
               <Text style={styles.reloadIcon}>↻</Text>
             </TouchableOpacity>
           </View>
-          
+
           {recommendationsLoading ? (
             <View style={styles.loadingRecommendations}>
               <ActivityIndicator size="small" color="#111" />
               <Text style={styles.loadingRecommendationsText}>Loading...</Text>
             </View>
           ) : recommendations.length > 0 ? (
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.recipesScrollContainer}
             >
@@ -574,24 +574,24 @@ export default function Dashboard() {
           )}
         </View>
 
-        
+
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Floating Action Buttons */}
       <View style={styles.floatingButtonsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.floatingButton, styles.secondaryFloatingButton]}
           onPress={() => router.push('./inventory')}
           activeOpacity={0.7}
         >
-          <Image 
-    source={{ uri: 'https://img.icons8.com/?size=100&id=107714&format=png&color=000000' }} 
+          <Image
+    source={{ uri: 'https://img.icons8.com/?size=100&id=107714&format=png&color=000000' }}
     style={styles.iconImage}
   />
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.floatingButton, styles.primaryFloatingButton]}
           onPress={() => router.push('./add-item')}
           activeOpacity={0.7}
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: 'bold',
   },
-  
+
   // Dropdown Styles
   dropdownOverlay: {
     flex: 1,
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '600',
   },
-  
+
   // Enhanced Chart Styles
   chartContainer: {
     backgroundColor: '#ffffff',
