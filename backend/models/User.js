@@ -9,9 +9,9 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   pushToken: {
-  type: String,
-  default: null
-},
+    type: String,
+    default: null
+  },
   name: String,
   email: { type: String, unique: true },
   password: String,
@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema({
     skillLevel: String,
     householdSize: Number,
     mealFrequency: String
+  },
+  // New field for tracking recipe views
+  recipesViewed: {
+    type: Number,
+    default: 0
   },
   createdAt: {
     type: Date,

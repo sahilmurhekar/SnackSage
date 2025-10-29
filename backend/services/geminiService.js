@@ -14,7 +14,7 @@ class GeminiService {
   async generateRecipeRecommendations(inventory, userPreferences = {}) {
     try {
       const inventoryList = this.formatInventoryForPrompt(inventory);
-      
+
       const prompt = `
         You are a professional chef and nutritionist. Based on the following inventory items, suggest 5 creative and delicious recipes that can be made with these ingredients.
 
@@ -55,10 +55,10 @@ class GeminiService {
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
+
       // Parse the JSON response
       const recipes = JSON.parse(text.trim());
-      
+
       // Validate the response structure
       if (!Array.isArray(recipes) || recipes.length === 0) {
         throw new Error('Invalid response format from Gemini');
@@ -76,9 +76,9 @@ class GeminiService {
 async generateRecipeRecommendations(inventory, userPreferences = {}) {
   try {
     const inventoryList = this.formatInventoryForPrompt(inventory);
-    
+
     console.log('🔍 Generating recommendations for inventory:', inventoryList);
-    
+
     const prompt = `
       You are a professional chef and nutritionist. Based on the following inventory items, suggest 5 creative and delicious recipes that can be made with these ingredients.
 
@@ -119,9 +119,9 @@ async generateRecipeRecommendations(inventory, userPreferences = {}) {
     const result = await this.model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    
+
     console.log('🤖 Raw Gemini response:', text);
-    
+
     // Clean the response - remove markdown formatting if present
     let cleanedText = text.trim();
     if (cleanedText.startsWith('```json')) {
@@ -129,9 +129,9 @@ async generateRecipeRecommendations(inventory, userPreferences = {}) {
     } else if (cleanedText.startsWith('```')) {
       cleanedText = cleanedText.replace(/```\n?/, '').replace(/\n?```$/, '');
     }
-    
+
     console.log('🧹 Cleaned response:', cleanedText);
-    
+
     // Parse the JSON response
     let recipes;
     try {
@@ -139,41 +139,41 @@ async generateRecipeRecommendations(inventory, userPreferences = {}) {
     } catch (parseError) {
       console.error('❌ JSON Parse Error:', parseError);
       console.error('📝 Text that failed to parse:', cleanedText);
-      
+
       // Fallback: return empty array instead of crashing
       return [];
     }
-    
+
     // Validate the response structure
     if (!Array.isArray(recipes)) {
       console.error('❌ Response is not an array:', recipes);
       return [];
     }
-    
+
     if (recipes.length === 0) {
       console.log('⚠️ No recipes returned from Gemini');
       return [];
     }
-    
+
     // Validate each recipe has required fields
     const validRecipes = recipes.filter(recipe => {
-      const isValid = recipe.name && recipe.description && recipe.mainIngredients && 
-                     Array.isArray(recipe.mainIngredients) && recipe.cookingTime && 
+      const isValid = recipe.name && recipe.description && recipe.mainIngredients &&
+                     Array.isArray(recipe.mainIngredients) && recipe.cookingTime &&
                      recipe.difficulty && recipe.cuisine;
-      
+
       if (!isValid) {
         console.log('⚠️ Invalid recipe filtered out:', recipe);
       }
       return isValid;
     });
-    
+
     console.log('✅ Valid recipes found:', validRecipes.length);
     return validRecipes;
-    
+
   } catch (error) {
     console.error('💥 Error generating recipe recommendations:', error);
     console.error('📍 Error stack:', error.stack);
-    
+
     // Return empty array instead of throwing error to prevent dashboard crash
     return [];
   }
@@ -183,16 +183,16 @@ async generateRecipeRecommendations(inventory, userPreferences = {}) {
   async handleChatMessage(message, context = {}) {
     try {
       const { currentRecipe, availableIngredients, conversationHistory } = context;
-      
+
       let prompt = `
-        You are a friendly, expert chef helping someone cook. 
+        You are a friendly, expert chef helping someone cook.
         ${currentRecipe ? `They are currently working on: ${currentRecipe}` : ''}
         ${availableIngredients?.length ? `Available ingredients: ${availableIngredients.join(', ')}` : ''}
-        
+
         Previous conversation context: ${conversationHistory || 'New conversation'}
-        
+
         User's message: "${message}"
-        
+
         Provide a helpful, conversational response. Be encouraging, practical, and specific.
         If they're asking about substitutions, alternatives, or cooking tips, be detailed.
         Keep responses concise but informative.
@@ -210,7 +210,7 @@ async generateRecipeRecommendations(inventory, userPreferences = {}) {
   // Helper method to format inventory for prompts
   formatInventoryForPrompt(inventory) {
     let inventoryText = '';
-    
+
     Object.entries(inventory).forEach(([category, items]) => {
       inventoryText += `\n${category.toUpperCase()}:\n`;
       items.forEach(item => {
@@ -218,7 +218,7 @@ async generateRecipeRecommendations(inventory, userPreferences = {}) {
         inventoryText += `- ${item.name} (${item.quantity.amount} ${item.quantity.unit})${expirationStatus}\n`;
       });
     });
-    
+
     return inventoryText;
   }
 
@@ -227,7 +227,7 @@ async generateRecipeRecommendations(inventory, userPreferences = {}) {
     const today = new Date();
     const expDate = new Date(expirationDate);
     const daysUntilExpiry = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-    
+
     if (daysUntilExpiry < 0) return ' [EXPIRED]';
     if (daysUntilExpiry <= 2) return ' [EXPIRES SOON]';
     if (daysUntilExpiry <= 7) return ' [USE WITHIN WEEK]';

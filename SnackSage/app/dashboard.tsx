@@ -11,7 +11,6 @@ import {
   Alert,
   Platform,
   Dimensions,
-  Animated,
   Modal,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -291,9 +290,7 @@ export default function Dashboard() {
 
   const handleProfile = () => {
     setDropdownVisible(false);
-    // Navigate to profile page when you have it
-    // router.push('./profile');
-    Alert.alert('Profile', 'Profile page coming soon!');
+    router.push('./profile');
   };
 
   const handleDropdownLogout = () => {
@@ -315,7 +312,26 @@ export default function Dashboard() {
     );
   };
 
+  // NEW: Track recipe view
+  const trackRecipeView = async () => {
+    try {
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) return;
+
+      await fetch(`${SERVER_URL}/api/profile/recipe-viewed`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Error tracking recipe view:', error);
+    }
+  };
+
   const handleRecipePress = (recipe: RecipeRecommendation) => {
+    trackRecipeView(); // Track the view
     router.push(`./recipe-chat?recipeName=${encodeURIComponent(recipe.name)}`);
   };
 
@@ -587,9 +603,9 @@ export default function Dashboard() {
           activeOpacity={0.7}
         >
           <Image
-    source={{ uri: 'https://img.icons8.com/?size=100&id=107714&format=png&color=000000' }}
-    style={styles.iconImage}
-  />
+            source={{ uri: 'https://img.icons8.com/?size=100&id=107714&format=png&color=000000' }}
+            style={styles.iconImage}
+          />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.floatingButton, styles.primaryFloatingButton]}
@@ -628,10 +644,10 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   iconImage: {
-  width: 24,
-  height: 24,
-  tintColor: '#fff', // Optional: Apply color tint if the image supports it (monochrome)
-},
+    width: 24,
+    height: 24,
+    tintColor: '#fff',
+  },
   subGreeting: {
     fontSize: 14,
     color: '#64748b',
@@ -1048,6 +1064,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bottomSpacing: {
-    height: 100, // Increased to accommodate floating buttons
+    height: 100,
   },
 });
