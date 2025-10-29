@@ -20,6 +20,6 @@ app.use(express.json());
 app.use('/api', require('../routes/authRoutes'));
 app.use('/api/items', require('../routes/itemRoutes'));
 app.use('/api/recipes', require('../routes/recipeRoutes'));
-app.use('/api/profile', require('./routes/profileRoutes'));
+app.use('/api/profile', require('../routes/profileRoutes'));
 
 module.exports = app; // <- IMPORTANT for Vercel
