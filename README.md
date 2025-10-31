@@ -1,3 +1,5 @@
+![SnackSage Logo](https://raw.githubusercontent.com/sahilmurhekar/SnackSage/main/assets/logo.png)
+
 # SnackSage: AI-Powered Pantry Management System
 
 ## 🧠 Overview
