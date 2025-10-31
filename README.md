@@ -6,7 +6,8 @@
 
 SnackSage is an **AI-powered mobile application** that helps reduce household food waste by integrating **real-time pantry inventory tracking** with **personalized recipe recommendations**. Built using **React Native**, **Express.js**, **MongoDB Atlas**, and **Google Gemini AI** with **Retrieval-Augmented Generation (RAG)**, SnackSage provides a smart, sustainable, and data-driven approach to food management.
 
-*App Link*: https://tinyurl.com/bdpc6tbn
+Download App: https://tinyurl.com/bdpc6tbn
+Web Trial: https://tinyurl.com/mryd7m8x
 ---
 
 ## 🚀 Key Features
